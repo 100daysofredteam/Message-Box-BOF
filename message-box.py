@@ -1,5 +1,5 @@
 from havoc import Demon, RegisterCommand
-
+from pathlib import Path
 
 def message_box( demonID, *params ):
     TaskID : str    = None
@@ -86,6 +86,58 @@ def message_box3( demonID, *params ):
     # return the new task ID
     return TaskID
     
+def message_box4( demonID, *params ):
+    TaskID : str    = None
+    demon  : Demon  = None
+    # create an instance of the argument packer
+    packer = Packer()
+    # get an instance of the demon
+    demon  = Demon(demonID)
+    messageType = ""
+    fileLocation = ""
+    message = ""
+    filePath = ""
+    if len(params) < 1:
+        demon.ConsoleWrite( demon.CONSOLE_ERROR, f"Error: Please specify the source file location (local or remote)." )
+        return False
+    else:
+        fileLocation = params[0]
+    if fileLocation.lower() != "local" and fileLocation.lower() != "remote":
+        demon.ConsoleWrite( demon.CONSOLE_ERROR, f"Error: Please specify a valid source file location (local or remote)." )
+        return False
+    
+    if len(params) < 2:
+        demon.ConsoleWrite( demon.CONSOLE_ERROR, f"Error: Please specify the source file path." )
+        return False
+    else:
+        filePath = params[1]
+        
+    if fileLocation.lower() == "local":
+        messageType = "custom"
+        try:
+             with open(filePath, 'rb') as f:
+                message = f.read()
+        except:
+            demon.ConsoleWrite( demon.CONSOLE_ERROR, f"Error: Please specify a valid file path." )
+            return False
+
+    # pack the parameters
+    packer.addstr( messageType )
+    packer.addstr( message )
+    packer.addstr( filePath )
+    
+    # create a task ID  
+    TaskID = demon.ConsoleWrite( demon.CONSOLE_TASK, f"Tasked demon to execute Message Box BOF with a message stored in a {fileLocation} file." )
+
+    # instruct Havoc to run a BOF with certain parameters
+    if fileLocation.lower() == "local":
+        demon.InlineExecute( TaskID, "go", f"message-box3.o", packer.getbuffer(), False )
+    else:
+        demon.InlineExecute( TaskID, "go", f"message-box4.o", packer.getbuffer(), False )
+    # return the new task ID
+    return TaskID
+
 RegisterCommand( message_box, "", "message-box", "Launches a message box on target machine.", 0, "Usage: message-box", "Example: message-box" )
 RegisterCommand( message_box2, "", "message-box2", "Launches a message box on target machine with a custom message.", 0, "Usage: message-box2 \"<message>\"", "Example: message-box2 \"100 Days of Red Team\"" )
 RegisterCommand( message_box3, "", "message-box3", "Launches a message box on target machine with a custom or static message.", 0, "Usage: message-box3 <message type> \"<message (optional)>\"", "Example: message-box3 custom \"100 Days of Red Team\"" )
+RegisterCommand( message_box4, "", "message-box4", "Launches a message box on target machine with a message stored in a file.", 0, "Usage: message-box4 <file location> <file path>", "Example: message-box4 local /path/to/file" )
